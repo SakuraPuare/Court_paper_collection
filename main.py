@@ -1,4 +1,5 @@
 import base64
+import html
 import json
 import random
 import re
@@ -14,7 +15,6 @@ random.seed(time.time())
 
 invisible = re.compile(
     r'[\001\002\003\004\005\006\007\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a]')
-html_tag = re.compile(r'<[^>]+>', re.S)
 
 types = {"1001": "执行实施", "1002": "首次执行", "1003": "恢复执行", "1004": "财产保全执行", "1005": "执行审查",
          "1006": "执行异议", "1007": "执行复议", "1008": "执行监督", "1009": "执行协调", "1010": "其他执行",
@@ -715,13 +715,13 @@ headers = {
 
 class Case:
     def __init__(self, item: dict):
-        self.name = item.get('1', '')
-        self.location = item.get('2', '')
-        self.case_number = item.get('7', '')
-        self.description = re.sub(html_tag, '', item.get('8', ''))
-        self.url = item.get('rowkey', '')
-        self.type = types.get(item.get('9', ''), '')
-        self.date = item.get('31', '1900-01-01')
+        self.name = html.escape(item.get('1', ''))  # 案件名称
+        self.location = html.escape(item.get('2', ''))  # 案件地点
+        self.case_number = html.escape(item.get('7', ''))  # 案号
+        self.description = html.escape(item.get('26', ''))  # 案件描述
+        self.url = html.escape(item.get('rowkey', ''))  # 案件链接
+        self.type = types.get(item.get('9', ''), '')  # 案件类型
+        self.date = item.get('31', '1900-01-01')  # 案件日期
 
     def __str__(self):
         return [self.name, self.location, self.url, self.description, self.case_number, self.date, self.type].__str__()
