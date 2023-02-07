@@ -8,10 +8,14 @@ import requests
 from Crypto.Cipher import DES3
 from Crypto.Util.Padding import pad
 
+from database import SQL, PaperList
+
 random.seed(time.time())
 
 invisible = re.compile(
     r'[\001\002\003\004\005\006\007\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a]')
+html_tag = re.compile(r'<[^>]+>', re.S)
+
 types = {"1001": "执行实施", "1002": "首次执行", "1003": "恢复执行", "1004": "财产保全执行", "1005": "执行审查",
          "1006": "执行异议", "1007": "执行复议", "1008": "执行监督", "1009": "执行协调", "1010": "其他执行",
          "1101": "强制清算与破产清算申请审查", "1102": "强制清算申请审查", "1103": "破产申请审查",
@@ -700,3 +704,54 @@ def cipher() -> str:
     encrypted = encrypt(timestamp, salt, iv)
     ciphertext = salt + iv + encrypted
     return str_to_bin(ciphertext)
+
+
+cookies = {
+}
+
+headers = {
+}
+
+
+class Case:
+    def __init__(self, item: dict):
+        self.name = item.get('1', '')
+        self.location = item.get('2', '')
+        self.case_number = item.get('7', '')
+        self.description = re.sub(html_tag, '', item.get('8', ''))
+        self.url = item.get('rowkey', '')
+        self.type = types.get(item.get('9', ''), '')
+        self.date = item.get('31', '1900-01-01')
+
+    def __str__(self):
+        return [self.name, self.location, self.url, self.description, self.case_number, self.date, self.type].__str__()
+
+    def __repr__(self):
+        return [self.name, self.location, self.url, self.description, self.case_number, self.date, self.type].__repr__()
+
+    def to_list(self) -> list:
+        return [self.name, self.location, self.url, self.description, self.case_number, self.date, self.type]
+
+
+sql = SQL()
+
+cnt = 1
+while True:
+    data = {
+    }
+
+    response = requests.post('https://wenshu.court.gov.cn/website/parse/rest.q4w', cookies=cookies, headers=headers,
+                             data=data)
+    assert not response.text.startswith('<!DOCTYPE html>')
+    assert response.json().get('success') is True
+    data = decrypt_response(response.text)
+
+    result = data.get('queryResult', dict()).get('resultList', None)
+    if not result:
+        break
+    result_list = []
+    for item in result:
+        result_list.append(Case(item))
+    sql.insert_into(PaperList.name, PaperList, result_list)
+    cnt += 1
+pass
