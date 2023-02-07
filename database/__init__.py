@@ -66,8 +66,8 @@ class SQL:
             if e.args[0] == 1049:
                 self.init()
 
-    def _execute(self, sql: str, args: tuple = ()) -> Union[tuple, None]:
-        self.cursor.execute(sql, args)
+    def _execute(self, sql: str) -> Union[tuple, None]:
+        self.cursor.execute(sql)
         try:
             self.db.commit()
             result = self.cursor.fetchone()
